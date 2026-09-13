@@ -1,7 +1,7 @@
 const authService = require('../services/authService');
 const sessionStore = require('../services/sessionStore');
 const loginAttemptTracker = require('../services/loginAttemptTracker');
-const { readJsonBody, parseCookies } = require('../utils/http');
+const { readJsonBody, parseCookies, PayloadTooLargeError } = require('../utils/http');
 
 const ROLE_REDIRECTS = {
   admin: '/admin',
@@ -13,6 +13,11 @@ async function handleLogin(req, res) {
   try {
     body = await readJsonBody(req);
   } catch (error) {
+    if (error instanceof PayloadTooLargeError) {
+      res.writeHead(413, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Request body is too large' }));
+      return;
+    }
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Invalid request body' }));
     return;
@@ -42,7 +47,7 @@ async function handleLogin(req, res) {
   const redirectPath = ROLE_REDIRECTS[user.role] || '/';
 
   res.writeHead(302, {
-    'Set-Cookie': `session=${token}; HttpOnly; Path=/; Max-Age=${maxAgeSeconds}`,
+    'Set-Cookie': `session=${token}; HttpOnly; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`,
     Location: redirectPath,
   });
   res.end();
@@ -54,7 +59,7 @@ function handleLogout(req, res) {
     sessionStore.destroySession(cookies.session);
   }
   res.writeHead(302, {
-    'Set-Cookie': 'session=; HttpOnly; Path=/; Max-Age=0',
+    'Set-Cookie': 'session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax',
     Location: '/login',
   });
   res.end();

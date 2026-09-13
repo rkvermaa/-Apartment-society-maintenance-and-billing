@@ -1,10 +1,30 @@
+const MAX_BODY_SIZE_BYTES = 1024 * 1024;
+
+class PayloadTooLargeError extends Error {
+  constructor() {
+    super('Request body exceeds the maximum allowed size');
+    this.code = 'PAYLOAD_TOO_LARGE';
+  }
+}
+
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
+    let size = 0;
+    let tooLarge = false;
     req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > MAX_BODY_SIZE_BYTES) {
+        if (!tooLarge) {
+          tooLarge = true;
+          reject(new PayloadTooLargeError());
+        }
+        return;
+      }
       data += chunk;
     });
     req.on('end', () => {
+      if (tooLarge) return;
       if (!data) {
         resolve({});
         return;
@@ -33,4 +53,4 @@ function parseCookies(req) {
   return cookies;
 }
 
-module.exports = { readJsonBody, parseCookies };
+module.exports = { readJsonBody, parseCookies, PayloadTooLargeError };
