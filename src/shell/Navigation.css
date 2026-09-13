@@ -1,0 +1,10 @@
+.nav-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.nav-link--active {
+  font-weight: bold;
+  text-decoration: underline;
+  color: #1a4fd6;
+}

@@ -16,11 +16,31 @@ describe('LoginScreen', () => {
       </AuthProvider>,
     );
 
-    await user.selectOptions(screen.getByLabelText('Role'), 'admin');
+    await user.type(screen.getByLabelText('Username'), 'admin');
+    await user.type(screen.getByLabelText('Password'), 'admin123');
     await user.click(screen.getByRole('button', { name: 'Log in' }));
 
     expect(screen.getByTestId('app-shell')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Admin Dashboard' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('rejects invalid credentials and keeps the user on the login screen with no auth granted', async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/login']}>
+          <App />
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+
+    await user.type(screen.getByLabelText('Username'), 'admin');
+    await user.type(screen.getByLabelText('Password'), 'wrong-password');
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+
+    expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Invalid username or password.');
+    expect(screen.queryByTestId('app-shell')).not.toBeInTheDocument();
   });
 });
