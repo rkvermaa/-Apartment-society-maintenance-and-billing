@@ -9,6 +9,7 @@ test('AC8: a session older than 24h is rejected and redirects to /login', async 
   loginAttemptTracker.reset();
   const server = await startTestServer();
   t.after(async () => {
+    t.mock.timers.reset();
     await server.close();
   });
 
