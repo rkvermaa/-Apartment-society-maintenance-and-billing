@@ -28,6 +28,7 @@ test('Session cookies carry a SameSite attribute to mitigate CSRF', async (t) =>
 
     cookieHeader = response.headers.get('set-cookie');
     assert.match(cookieHeader, /SameSite=Lax/i);
+    assert.match(cookieHeader, /;\s*Secure/i);
   });
 
   await t.test('POST /logout sets SameSite=Lax on the cleared cookie', async () => {
@@ -44,6 +45,8 @@ test('Session cookies carry a SameSite attribute to mitigate CSRF', async (t) =>
       headers: { Cookie: loginResponse.headers.get('set-cookie') },
     });
 
-    assert.match(response.headers.get('set-cookie'), /SameSite=Lax/i);
+    const clearedCookie = response.headers.get('set-cookie');
+    assert.match(clearedCookie, /SameSite=Lax/i);
+    assert.match(clearedCookie, /;\s*Secure/i);
   });
 });

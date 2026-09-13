@@ -47,7 +47,7 @@ async function handleLogin(req, res) {
   const redirectPath = ROLE_REDIRECTS[user.role] || '/';
 
   res.writeHead(302, {
-    'Set-Cookie': `session=${token}; HttpOnly; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`,
+    'Set-Cookie': `session=${token}; HttpOnly; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax; Secure`,
     Location: redirectPath,
   });
   res.end();
@@ -59,7 +59,7 @@ function handleLogout(req, res) {
     sessionStore.destroySession(cookies.session);
   }
   res.writeHead(302, {
-    'Set-Cookie': 'session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax',
+    'Set-Cookie': 'session=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax; Secure',
     Location: '/login',
   });
   res.end();
