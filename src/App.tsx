@@ -12,11 +12,15 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginScreen />} />
-      <Route element={<ProtectedRoute />}>
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route element={<AppShell />}>
           <Route path="/admin/dashboard" element={<AdminDashboardScreen />} />
           <Route path="/admin/maintenance" element={<AdminMaintenanceScreen />} />
           <Route path="/admin/billing" element={<AdminBillingScreen />} />
+        </Route>
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={['resident']} />}>
+        <Route element={<AppShell />}>
           <Route path="/resident/dashboard" element={<ResidentDashboardScreen />} />
           <Route path="/resident/payments" element={<ResidentPaymentsScreen />} />
         </Route>
