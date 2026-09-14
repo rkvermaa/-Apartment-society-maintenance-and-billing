@@ -8,9 +8,14 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "migrate:latest": "knex migrate:latest --knexfile db/knexfile.cjs",
+    "migrate:rollback": "knex migrate:rollback --knexfile db/knexfile.cjs",
+    "migrate:list": "knex migrate:list --knexfile db/knexfile.cjs"
   },
   "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "knex": "^3.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2"
@@ -19,6 +24,7 @@
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^20.14.15",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.2",
