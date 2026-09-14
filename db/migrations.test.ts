@@ -33,6 +33,22 @@ async function tableNames(): Promise<string[]> {
   return rows.map((row) => row.name as string);
 }
 
+type ColumnInfo = { name: string; notnull: number; dflt_value: unknown };
+
+async function columnInfo(table: string): Promise<ColumnInfo[]> {
+  return (await db.raw(`PRAGMA table_info(${table})`)) as ColumnInfo[];
+}
+
+async function uniqueColumnSets(table: string): Promise<string[][]> {
+  const indexes = (await db.raw(`PRAGMA index_list(${table})`)) as Array<{ name: string; unique: number }>;
+  const uniqueSets: string[][] = [];
+  for (const index of indexes.filter((i) => i.unique)) {
+    const columns = (await db.raw(`PRAGMA index_info(${index.name})`)) as Array<{ name: string }>;
+    uniqueSets.push(columns.map((c) => c.name));
+  }
+  return uniqueSets;
+}
+
 describe('core domain migrations', () => {
   it('creates all core domain tables (AC1)', async () => {
     await db.migrate.latest();
@@ -42,10 +58,29 @@ describe('core domain migrations', () => {
   it('declares the documented columns and foreign keys (AC2)', async () => {
     await db.migrate.latest();
 
-    const userColumns = (await db.raw('PRAGMA table_info(users)')) as Array<{ name: string }>;
+    const rolesColumns = await columnInfo('roles');
+    expect(rolesColumns.map((c) => c.name)).toEqual(expect.arrayContaining(['id', 'name', 'created_at']));
+    expect(rolesColumns.find((c) => c.name === 'name')?.notnull).toBe(1);
+    expect(await uniqueColumnSets('roles')).toEqual(expect.arrayContaining([['name']]));
+
+    const flatsColumns = await columnInfo('flats');
+    expect(flatsColumns.map((c) => c.name)).toEqual(
+      expect.arrayContaining(['id', 'flat_number', 'block', 'created_at']),
+    );
+    expect(flatsColumns.find((c) => c.name === 'flat_number')?.notnull).toBe(1);
+    expect(flatsColumns.find((c) => c.name === 'block')?.notnull).toBe(1);
+    const flatsUniqueSets = await uniqueColumnSets('flats');
+    expect(flatsUniqueSets.some((set) => set.includes('flat_number') && set.includes('block'))).toBe(true);
+
+    const userColumns = await columnInfo('users');
     expect(userColumns.map((c) => c.name)).toEqual(
       expect.arrayContaining(['id', 'name', 'email', 'password_hash', 'role_id', 'flat_id', 'created_at']),
     );
+    expect(userColumns.find((c) => c.name === 'email')?.notnull).toBe(1);
+    expect(userColumns.find((c) => c.name === 'password_hash')?.notnull).toBe(1);
+    expect(userColumns.find((c) => c.name === 'role_id')?.notnull).toBe(1);
+    expect(userColumns.find((c) => c.name === 'flat_id')?.notnull).toBe(0);
+    expect(await uniqueColumnSets('users')).toEqual(expect.arrayContaining([['email']]));
 
     const userFks = (await db.raw('PRAGMA foreign_key_list(users)')) as Array<{ table: string; from: string; to: string }>;
     expect(userFks).toEqual(
@@ -55,8 +90,27 @@ describe('core domain migrations', () => {
       ]),
     );
 
+    const billColumns = await columnInfo('bills');
+    expect(billColumns.map((c) => c.name)).toEqual(
+      expect.arrayContaining(['id', 'flat_id', 'billing_period', 'amount', 'due_date', 'status', 'created_at']),
+    );
+    expect(billColumns.find((c) => c.name === 'flat_id')?.notnull).toBe(1);
+    expect(billColumns.find((c) => c.name === 'billing_period')?.notnull).toBe(1);
+    expect(billColumns.find((c) => c.name === 'amount')?.notnull).toBe(1);
+    expect(billColumns.find((c) => c.name === 'due_date')?.notnull).toBe(1);
+    expect(billColumns.find((c) => c.name === 'status')?.dflt_value).toBe("'pending'");
+
     const billFks = (await db.raw('PRAGMA foreign_key_list(bills)')) as Array<{ table: string; from: string; to: string }>;
     expect(billFks).toEqual(expect.arrayContaining([expect.objectContaining({ table: 'flats', from: 'flat_id', to: 'id' })]));
+
+    const paymentColumns = await columnInfo('payments');
+    expect(paymentColumns.map((c) => c.name)).toEqual(
+      expect.arrayContaining(['id', 'bill_id', 'amount', 'paid_at', 'method', 'created_at']),
+    );
+    expect(paymentColumns.find((c) => c.name === 'bill_id')?.notnull).toBe(1);
+    expect(paymentColumns.find((c) => c.name === 'amount')?.notnull).toBe(1);
+    expect(paymentColumns.find((c) => c.name === 'paid_at')?.notnull).toBe(1);
+    expect(paymentColumns.find((c) => c.name === 'method')?.notnull).toBe(1);
 
     const paymentFks = (await db.raw('PRAGMA foreign_key_list(payments)')) as Array<{ table: string; from: string; to: string }>;
     expect(paymentFks).toEqual(expect.arrayContaining([expect.objectContaining({ table: 'bills', from: 'bill_id', to: 'id' })]));
