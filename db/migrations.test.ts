@@ -16,6 +16,12 @@ beforeEach(() => {
     client: 'better-sqlite3',
     connection: { filename: path.join(tmpDir, 'test.sqlite3') },
     useNullAsDefault: true,
+    pool: {
+      afterCreate: (conn: { pragma: (statement: string) => void }, done: (err: Error | null, conn: unknown) => void) => {
+        conn.pragma('foreign_keys = ON');
+        done(null, conn);
+      },
+    },
     migrations: {
       directory: path.join(__dirname, 'migrations'),
       extension: 'cjs',
@@ -131,6 +137,35 @@ describe('core domain migrations', () => {
 
     const usersTables = await db('sqlite_master').select('name').where({ type: 'table', name: 'users' });
     expect(usersTables).toHaveLength(1);
+  });
+
+  it('enforces declared foreign-key constraints at runtime (AC2)', async () => {
+    await db.migrate.latest();
+
+    const [{ foreign_keys: foreignKeysEnabled }] = (await db.raw('PRAGMA foreign_keys')) as Array<{
+      foreign_keys: number;
+    }>;
+    expect(foreignKeysEnabled).toBe(1);
+
+    const [role] = await db('roles').insert({ name: 'resident' }).returning('id');
+    const [flat] = await db('flats').insert({ flat_number: '101', block: 'A' }).returning('id');
+    await db('users').insert({
+      name: 'Jane',
+      email: 'jane@example.com',
+      password_hash: 'hash',
+      role_id: role.id,
+      flat_id: flat.id,
+    });
+
+    await expect(db('roles').where({ id: role.id }).delete()).rejects.toThrow();
+
+    const [bill] = await db('bills')
+      .insert({ flat_id: flat.id, billing_period: '2026-01', amount: '100.00', due_date: '2026-01-31' })
+      .returning('id');
+    await db('payments').insert({ bill_id: bill.id, amount: '100.00', paid_at: new Date(), method: 'cash' });
+
+    await db('bills').where({ id: bill.id }).delete();
+    expect(await db('payments').where({ bill_id: bill.id })).toHaveLength(0);
   });
 
   it('records applied migrations with identifier and order (AC5)', async () => {
