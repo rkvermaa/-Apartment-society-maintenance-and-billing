@@ -6,10 +6,10 @@ interface DemoUser {
   role: Role;
 }
 
-// Placeholder credential store for the shell demo. The session-management
-// story (STORY-013) owns real backend credential verification and
-// server-issued session tokens; once that API exists, this lookup must be
-// replaced with a call to it and role must be read only from that response.
+// Demo credential store, verified server-side only (see server/session.ts) so that role
+// can never be asserted by the client. A real `users`-table-backed credential store is
+// STORY-013's job; once that lands, this lookup is replaced without changing any caller
+// of authenticate(), since verification already happens exclusively on the server.
 const DEMO_USERS: DemoUser[] = [
   { username: 'admin', password: 'admin123', role: 'admin' },
   { username: 'resident', password: 'resident123', role: 'resident' },
