@@ -1,5 +1,3 @@
-import type { Role } from '../../../auth/AuthContext';
-
 export interface FlatBillFailure {
   flatId: number;
   flatLabel: string;
@@ -25,13 +23,13 @@ const GENERIC_ERROR_MESSAGE = 'Something went wrong generating bills. Please try
 
 export async function generateMonthlyBills(
   billingPeriod: string,
-  role: Role,
+  token: string,
 ): Promise<BillGenerationSummary> {
   let response: Response;
   try {
     response = await fetch('/api/billing/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-user-role': role },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ billingPeriod }),
     });
   } catch {
@@ -43,11 +41,11 @@ export async function generateMonthlyBills(
   return response.json();
 }
 
-export async function listBillsForMonth(billingPeriod: string, role: Role): Promise<Bill[]> {
+export async function listBillsForMonth(billingPeriod: string, token: string): Promise<Bill[]> {
   let response: Response;
   try {
     response = await fetch(`/api/billing/bills?month=${encodeURIComponent(billingPeriod)}`, {
-      headers: { 'x-user-role': role },
+      headers: { Authorization: `Bearer ${token}` },
     });
   } catch {
     throw new Error(GENERIC_ERROR_MESSAGE);

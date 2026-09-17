@@ -12,7 +12,7 @@ function currentMonth(): string {
 }
 
 export function AdminBillingScreen() {
-  const { role } = useAuth();
+  const { token } = useAuth();
   const [month, setMonth] = useState(currentMonth);
   const [isGenerating, setIsGenerating] = useState(false);
   const [summary, setSummary] = useState<BillGenerationSummary | null>(null);
@@ -20,18 +20,18 @@ export function AdminBillingScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!month || !role) return;
-    listBillsForMonth(month, role).then(setBills);
-  }, [month, role]);
+    if (!month || !token) return;
+    listBillsForMonth(month, token).then(setBills);
+  }, [month, token]);
 
   async function handleGenerate() {
-    if (!role) return;
+    if (!token) return;
     setIsGenerating(true);
     setErrorMessage(null);
     try {
-      const result = await generateMonthlyBills(month, role);
+      const result = await generateMonthlyBills(month, token);
       setSummary(result);
-      setBills(await listBillsForMonth(month, role));
+      setBills(await listBillsForMonth(month, token));
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Bill generation failed.');
     } finally {
