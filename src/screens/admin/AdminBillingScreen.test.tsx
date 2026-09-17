@@ -106,6 +106,20 @@ describe('AdminBillingScreen', () => {
     expect(await screen.findByText('A-101 — unpaid')).toBeInTheDocument();
   });
 
+  it('shows an error message and re-enables the trigger when generation fails outright', async () => {
+    const user = userEvent.setup();
+    mockedGenerate.mockRejectedValue(new Error('No backend available to generate bills yet.'));
+    render(<AdminBillingScreen />);
+    fireEvent.change(screen.getByLabelText('Month'), { target: { value: '2026-02' } });
+    const button = screen.getByRole('button', { name: 'Generate bills' });
+
+    await user.click(button);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No backend available to generate bills yet.');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(button).not.toBeDisabled();
+  });
+
   it('shows an empty-state message for a month with no bills (AC11)', async () => {
     mockedList.mockResolvedValue([]);
     render(<AdminBillingScreen />);

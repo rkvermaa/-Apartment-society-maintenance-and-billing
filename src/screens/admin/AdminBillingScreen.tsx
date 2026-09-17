@@ -15,6 +15,7 @@ export function AdminBillingScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [summary, setSummary] = useState<BillGenerationSummary | null>(null);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!month) return;
@@ -23,10 +24,13 @@ export function AdminBillingScreen() {
 
   async function handleGenerate() {
     setIsGenerating(true);
+    setErrorMessage(null);
     try {
       const result = await generateMonthlyBills(month);
       setSummary(result);
       setBills(await listBillsForMonth(month));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Bill generation failed.');
     } finally {
       setIsGenerating(false);
     }
@@ -46,6 +50,7 @@ export function AdminBillingScreen() {
         Generate bills
       </button>
       {isGenerating && <p role="status">Generating bills…</p>}
+      {errorMessage && <p role="alert">{errorMessage}</p>}
       {summary && summary.alreadyExistingCount > 0 && (
         <p>{summary.alreadyExistingCount} flat(s) already had a bill generated for this month.</p>
       )}
