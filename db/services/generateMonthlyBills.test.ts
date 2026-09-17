@@ -112,4 +112,46 @@ describe('generateMonthlyBills', () => {
     const [bill] = await db('bills').where({ billing_period: '2026-02' });
     expect(bill.status).toBe('unpaid');
   });
+
+  it('creates only one bill and reports consistent already-exists results when two requests race for the same flat/month (AC6, AC7)', async () => {
+    await db.migrate.latest();
+    const flatId = await seedFlat();
+
+    const [resultA, resultB] = await Promise.all([
+      generateMonthlyBills(db, '2026-02'),
+      generateMonthlyBills(db, '2026-02'),
+    ]);
+
+    const bills = await db('bills').where({ flat_id: flatId, billing_period: '2026-02' });
+    expect(bills).toHaveLength(1);
+    const createdCount = [resultA, resultB].filter((r) => r.created.some((c) => c.flatId === flatId)).length;
+    const alreadyExistsCount = [resultA, resultB].filter((r) => r.alreadyExists.some((a) => a.flatId === flatId)).length;
+    expect(createdCount).toBe(1);
+    expect(alreadyExistsCount).toBe(1);
+    expect(resultA.failed).toHaveLength(0);
+    expect(resultB.failed).toHaveLength(0);
+  });
+
+  it('on retrigger, only reprocesses previously failed flats and uses their current amount, leaving prior bills untouched (AC8, AC9, AC10, AC11)', async () => {
+    await db.migrate.latest();
+    const stableFlat = await seedFlat({ flat_number: '101', monthly_maintenance_amount: 1500 });
+    const pendingFlat = await seedFlat({ flat_number: '102', monthly_maintenance_amount: null });
+
+    const first = await generateMonthlyBills(db, '2026-02');
+    const stableBillId = first.created.find((c) => c.flatId === stableFlat)!.billId;
+    expect(first.failed.map((f) => f.flatId)).toContain(pendingFlat);
+
+    await db('flats').where({ id: stableFlat }).update({ monthly_maintenance_amount: 1700 });
+    await db('flats').where({ id: pendingFlat }).update({ monthly_maintenance_amount: 2000 });
+
+    const second = await generateMonthlyBills(db, '2026-02');
+
+    expect(second.alreadyExists.map((a) => a.flatId)).toEqual([stableFlat]);
+    expect(second.created.map((c) => c.flatId)).toEqual([pendingFlat]);
+
+    const stableBillAfter = await db('bills').where({ id: stableBillId }).first();
+    expect(Number(stableBillAfter.amount)).toBe(1500);
+    const pendingBill = await db('bills').where({ flat_id: pendingFlat, billing_period: '2026-02' }).first();
+    expect(Number(pendingBill.amount)).toBe(2000);
+  });
 });

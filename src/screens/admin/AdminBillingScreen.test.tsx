@@ -109,14 +109,14 @@ describe('AdminBillingScreen', () => {
 
   it('shows an error message and re-enables the trigger when generation fails outright', async () => {
     const user = userEvent.setup();
-    mockedGenerate.mockRejectedValue(new Error('No backend available to generate bills yet.'));
+    mockedGenerate.mockRejectedValue(new Error('Something went wrong generating bills. Please try again.'));
     renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
     fireEvent.change(screen.getByLabelText('Month'), { target: { value: '2026-02' } });
     const button = screen.getByRole('button', { name: 'Generate bills' });
 
     await user.click(button);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('No backend available to generate bills yet.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong generating bills. Please try again.');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(button).not.toBeDisabled();
   });

@@ -22,6 +22,7 @@ export function AdminBillingScreen() {
 
   const loadBills = useCallback(
     async (targetMonth: string) => {
+      if (!role) return;
       setListErrorMessage(null);
       try {
         setBills(await listBillsForMonth(targetMonth, role));
@@ -33,15 +34,16 @@ export function AdminBillingScreen() {
   );
 
   useEffect(() => {
-    if (!month) return;
+    if (!month || !role) return;
     loadBills(month);
-  }, [month, loadBills]);
+  }, [month, role, loadBills]);
 
   async function handleGenerate() {
+    if (!role) return;
     setIsGenerating(true);
     setErrorMessage(null);
     try {
-      const result = await generateMonthlyBills(month);
+      const result = await generateMonthlyBills(month, role);
       setSummary(result);
       await loadBills(month);
     } catch (error) {
