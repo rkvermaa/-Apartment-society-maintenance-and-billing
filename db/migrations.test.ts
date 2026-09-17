@@ -172,7 +172,7 @@ describe('core domain migrations', () => {
     await db.migrate.latest();
     const history = await db('knex_migrations').select('id', 'name', 'batch').orderBy('id');
 
-    expect(history).toHaveLength(5);
+    expect(history).toHaveLength(7);
     expect(history[0]).toHaveProperty('name');
     expect(history.every((row) => typeof row.id === 'number')).toBe(true);
   });
