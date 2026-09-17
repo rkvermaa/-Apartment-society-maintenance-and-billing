@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '../../auth/useAuth';
 import {
   generateMonthlyBills,
   listBillsForMonth,
@@ -11,16 +12,30 @@ function currentMonth(): string {
 }
 
 export function AdminBillingScreen() {
+  const { role } = useAuth();
   const [month, setMonth] = useState(currentMonth);
   const [isGenerating, setIsGenerating] = useState(false);
   const [summary, setSummary] = useState<BillGenerationSummary | null>(null);
   const [bills, setBills] = useState<Bill[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [listErrorMessage, setListErrorMessage] = useState<string | null>(null);
+
+  const loadBills = useCallback(
+    async (targetMonth: string) => {
+      setListErrorMessage(null);
+      try {
+        setBills(await listBillsForMonth(targetMonth, role));
+      } catch (error) {
+        setListErrorMessage(error instanceof Error ? error.message : 'Unable to load bills. Please try again.');
+      }
+    },
+    [role],
+  );
 
   useEffect(() => {
     if (!month) return;
-    listBillsForMonth(month).then(setBills);
-  }, [month]);
+    loadBills(month);
+  }, [month, loadBills]);
 
   async function handleGenerate() {
     setIsGenerating(true);
@@ -28,7 +43,7 @@ export function AdminBillingScreen() {
     try {
       const result = await generateMonthlyBills(month);
       setSummary(result);
-      setBills(await listBillsForMonth(month));
+      await loadBills(month);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Bill generation failed.');
     } finally {
@@ -67,7 +82,14 @@ export function AdminBillingScreen() {
         </div>
       )}
       <h2>Bills for {month}</h2>
-      {bills.length === 0 ? (
+      {listErrorMessage ? (
+        <div role="alert">
+          <p>{listErrorMessage}</p>
+          <button type="button" onClick={() => loadBills(month)}>
+            Retry
+          </button>
+        </div>
+      ) : bills.length === 0 ? (
         <p>No bills found for this month.</p>
       ) : (
         <ul>
