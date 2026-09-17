@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../auth/useAuth';
 import {
   generateMonthlyBills,
   listBillsForMonth,
@@ -11,6 +12,7 @@ function currentMonth(): string {
 }
 
 export function AdminBillingScreen() {
+  const { role } = useAuth();
   const [month, setMonth] = useState(currentMonth);
   const [isGenerating, setIsGenerating] = useState(false);
   const [summary, setSummary] = useState<BillGenerationSummary | null>(null);
@@ -18,17 +20,18 @@ export function AdminBillingScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!month) return;
-    listBillsForMonth(month).then(setBills);
-  }, [month]);
+    if (!month || !role) return;
+    listBillsForMonth(month, role).then(setBills);
+  }, [month, role]);
 
   async function handleGenerate() {
+    if (!role) return;
     setIsGenerating(true);
     setErrorMessage(null);
     try {
-      const result = await generateMonthlyBills(month);
+      const result = await generateMonthlyBills(month, role);
       setSummary(result);
-      setBills(await listBillsForMonth(month));
+      setBills(await listBillsForMonth(month, role));
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Bill generation failed.');
     } finally {

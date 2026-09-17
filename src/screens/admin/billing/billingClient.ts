@@ -1,3 +1,5 @@
+import type { Role } from '../../../auth/AuthContext';
+
 export interface FlatBillFailure {
   flatId: number;
   flatLabel: string;
@@ -19,13 +21,39 @@ export interface Bill {
   status: 'unpaid' | 'paid';
 }
 
-// Placeholder billing client for the admin billing screen. There is no backend/API layer in
-// this codebase yet (see src/auth/credentials.ts for the same deferral); once one exists,
-// these must call it directly, backed by db/services/generateMonthlyBills.ts.
-export async function generateMonthlyBills(billingPeriod: string): Promise<BillGenerationSummary> {
-  throw new Error(`No backend available to generate bills for ${billingPeriod} yet.`);
+const GENERIC_ERROR_MESSAGE = 'Something went wrong generating bills. Please try again.';
+
+export async function generateMonthlyBills(
+  billingPeriod: string,
+  role: Role,
+): Promise<BillGenerationSummary> {
+  let response: Response;
+  try {
+    response = await fetch('/api/billing/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-role': role },
+      body: JSON.stringify({ billingPeriod }),
+    });
+  } catch {
+    throw new Error(GENERIC_ERROR_MESSAGE);
+  }
+  if (!response.ok) {
+    throw new Error(GENERIC_ERROR_MESSAGE);
+  }
+  return response.json();
 }
 
-export async function listBillsForMonth(_billingPeriod: string): Promise<Bill[]> {
-  return [];
+export async function listBillsForMonth(billingPeriod: string, role: Role): Promise<Bill[]> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/billing/bills?month=${encodeURIComponent(billingPeriod)}`, {
+      headers: { 'x-user-role': role },
+    });
+  } catch {
+    throw new Error(GENERIC_ERROR_MESSAGE);
+  }
+  if (!response.ok) {
+    throw new Error(GENERIC_ERROR_MESSAGE);
+  }
+  return response.json();
 }

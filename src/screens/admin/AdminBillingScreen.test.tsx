@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AdminBillingScreen } from './AdminBillingScreen';
+import { renderWithAuth } from '../../test-utils';
 import * as billingClient from './billing/billingClient';
 
 vi.mock('./billing/billingClient');
@@ -24,7 +25,7 @@ describe('AdminBillingScreen', () => {
       alreadyExistingCount: 1,
       failures: [],
     });
-    render(<AdminBillingScreen />);
+    renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
     fireEvent.change(screen.getByLabelText('Month'), { target: { value: '2026-02' } });
 
     await user.click(screen.getByRole('button', { name: 'Generate bills' }));
@@ -40,7 +41,7 @@ describe('AdminBillingScreen', () => {
       alreadyExistingCount: 0,
       failures: [{ flatId: 7, flatLabel: 'A-101', reason: 'amount missing' }],
     });
-    render(<AdminBillingScreen />);
+    renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
     fireEvent.change(screen.getByLabelText('Month'), { target: { value: '2026-02' } });
 
     await user.click(screen.getByRole('button', { name: 'Generate bills' }));
@@ -58,7 +59,7 @@ describe('AdminBillingScreen', () => {
         resolveGenerate = resolve;
       }),
     );
-    render(<AdminBillingScreen />);
+    renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
     fireEvent.change(screen.getByLabelText('Month'), { target: { value: '2026-02' } });
 
     await user.click(screen.getByRole('button', { name: 'Generate bills' }));
@@ -76,7 +77,7 @@ describe('AdminBillingScreen', () => {
         resolveGenerate = resolve;
       }),
     );
-    render(<AdminBillingScreen />);
+    renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
     fireEvent.change(screen.getByLabelText('Month'), { target: { value: '2026-02' } });
     const button = screen.getByRole('button', { name: 'Generate bills' });
 
@@ -98,7 +99,7 @@ describe('AdminBillingScreen', () => {
     mockedList.mockResolvedValue([
       { id: 1, flatLabel: 'A-101', billingPeriod: '2026-02', amount: 1500, status: 'unpaid' },
     ]);
-    render(<AdminBillingScreen />);
+    renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
     fireEvent.change(screen.getByLabelText('Month'), { target: { value: '2026-02' } });
 
     await user.click(screen.getByRole('button', { name: 'Generate bills' }));
@@ -108,21 +109,21 @@ describe('AdminBillingScreen', () => {
 
   it('shows an error message and re-enables the trigger when generation fails outright', async () => {
     const user = userEvent.setup();
-    mockedGenerate.mockRejectedValue(new Error('No backend available to generate bills yet.'));
-    render(<AdminBillingScreen />);
+    mockedGenerate.mockRejectedValue(new Error('Something went wrong generating bills. Please try again.'));
+    renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
     fireEvent.change(screen.getByLabelText('Month'), { target: { value: '2026-02' } });
     const button = screen.getByRole('button', { name: 'Generate bills' });
 
     await user.click(button);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('No backend available to generate bills yet.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong generating bills. Please try again.');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(button).not.toBeDisabled();
   });
 
   it('shows an empty-state message for a month with no bills (AC11)', async () => {
     mockedList.mockResolvedValue([]);
-    render(<AdminBillingScreen />);
+    renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
 
     expect(await screen.findByText('No bills found for this month.')).toBeInTheDocument();
   });

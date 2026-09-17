@@ -29,16 +29,8 @@ export async function generateMonthlyBills(
   const dueDate = lastDayOfMonth(billingPeriod);
 
   for (const flat of activeFlats) {
-    const existing = await db('bills')
-      .where({ flat_id: flat.id, billing_period: billingPeriod })
-      .first();
-    if (existing) {
-      result.alreadyExists.push({ flatId: flat.id });
-      continue;
-    }
-
     try {
-      const [row] = await db('bills')
+      const inserted = await db('bills')
         .insert({
           flat_id: flat.id,
           billing_period: billingPeriod,
@@ -46,8 +38,15 @@ export async function generateMonthlyBills(
           due_date: dueDate,
           status: 'unpaid',
         })
+        .onConflict(['flat_id', 'billing_period'])
+        .ignore()
         .returning('id');
-      result.created.push({ flatId: flat.id, billId: row.id });
+
+      if (inserted.length > 0) {
+        result.created.push({ flatId: flat.id, billId: inserted[0].id });
+      } else {
+        result.alreadyExists.push({ flatId: flat.id });
+      }
     } catch (error) {
       result.failed.push({
         flatId: flat.id,
