@@ -12,7 +12,7 @@ function currentMonth(): string {
 }
 
 export function AdminBillingScreen() {
-  const { role } = useAuth();
+  const { token } = useAuth();
   const [month, setMonth] = useState(currentMonth);
   const [isGenerating, setIsGenerating] = useState(false);
   const [summary, setSummary] = useState<BillGenerationSummary | null>(null);
@@ -22,28 +22,28 @@ export function AdminBillingScreen() {
 
   const loadBills = useCallback(
     async (targetMonth: string) => {
-      if (!role) return;
+      if (!token) return;
       setListErrorMessage(null);
       try {
-        setBills(await listBillsForMonth(targetMonth, role));
+        setBills(await listBillsForMonth(targetMonth, token));
       } catch (error) {
         setListErrorMessage(error instanceof Error ? error.message : 'Unable to load bills. Please try again.');
       }
     },
-    [role],
+    [token],
   );
 
   useEffect(() => {
-    if (!month || !role) return;
+    if (!month || !token) return;
     loadBills(month);
-  }, [month, role, loadBills]);
+  }, [month, token, loadBills]);
 
   async function handleGenerate() {
-    if (!role) return;
+    if (!token) return;
     setIsGenerating(true);
     setErrorMessage(null);
     try {
-      const result = await generateMonthlyBills(month, role);
+      const result = await generateMonthlyBills(month, token);
       setSummary(result);
       await loadBills(month);
     } catch (error) {
