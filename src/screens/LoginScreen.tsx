@@ -23,7 +23,7 @@ export function LoginScreen() {
     }
 
     logger.info('login_succeeded', { username, role });
-    login(role);
+    login(role, username);
     navigate(navConfigByRole[role][0].path, { replace: true });
   }
 

@@ -8,5 +8,5 @@ const port = Number(process.env.ARC_DEV_PORT) || 8004;
 createApp(db, {
   unverifiedRoleAuthEnabled: process.env.ARC_ENABLE_UNVERIFIED_ROLE_AUTH === 'true',
 }).listen(port, () => {
-  console.log(`Bills API listening on port ${port}`);
+  console.log(`API listening on port ${port}`);
 });

@@ -1,7 +1,8 @@
-import express from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
 import type { Knex } from 'knex';
 import { listBillsForMonth } from '../db/services/listBillsForMonth';
 import { requireRole } from './auth';
+import { InvalidFlatUpdateError, listFlats, updateFlat } from '../db/services/flats';
 
 const MONTH_PATTERN = /^\d{4}-\d{2}$/;
 
@@ -16,6 +17,7 @@ export interface CreateAppOptions {
 
 export function createApp(db: Knex, options: CreateAppOptions) {
   const app = express();
+  app.use(express.json());
 
   if (options.unverifiedRoleAuthEnabled) {
     app.get('/api/bills', requireRole('admin'), async (req, res) => {
@@ -34,6 +36,32 @@ export function createApp(db: Knex, options: CreateAppOptions) {
       }
     });
   }
+
+  function requireAdmin(req: Request, res: Response, next: NextFunction) {
+    if (req.header('x-actor-role') !== 'admin') {
+      res.status(403).json({ error: 'Admin role required.' });
+      return;
+    }
+    next();
+  }
+
+  app.get('/api/flats', requireAdmin, async (_req, res) => {
+    res.json(await listFlats(db));
+  });
+
+  app.patch('/api/flats/:id', requireAdmin, async (req, res) => {
+    const actingUsername = req.header('x-actor-username') ?? 'unknown';
+    try {
+      const updated = await updateFlat(db, Number(req.params.id), req.body, actingUsername);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof InvalidFlatUpdateError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      throw error;
+    }
+  });
 
   return app;
 }
