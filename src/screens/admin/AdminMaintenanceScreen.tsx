@@ -3,8 +3,8 @@ import { useAuth } from '../../auth/useAuth';
 import { listFlats, updateFlat, type Flat } from './maintenance/flatsClient';
 
 export function AdminMaintenanceScreen() {
-  const { role, username } = useAuth();
-  const actor = { role: role ?? '', username: username ?? '' };
+  const { token } = useAuth();
+  const actor = { token: token ?? '' };
   const [flats, setFlats] = useState<Flat[]>([]);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [errors, setErrors] = useState<Record<number, string>>({});
@@ -33,8 +33,16 @@ export function AdminMaintenanceScreen() {
   }
 
   async function handleToggleActive(flat: Flat) {
-    const updated = await updateFlat(actor, flat.id, { isActive: !flat.isActive });
-    setFlats((prev) => prev.map((f) => (f.id === flat.id ? updated : f)));
+    try {
+      const updated = await updateFlat(actor, flat.id, { isActive: !flat.isActive });
+      setFlats((prev) => prev.map((f) => (f.id === flat.id ? updated : f)));
+      setErrors((prev) => ({ ...prev, [flat.id]: '' }));
+    } catch (error) {
+      setErrors((prev) => ({
+        ...prev,
+        [flat.id]: error instanceof Error ? error.message : 'Update failed.',
+      }));
+    }
   }
 
   return (

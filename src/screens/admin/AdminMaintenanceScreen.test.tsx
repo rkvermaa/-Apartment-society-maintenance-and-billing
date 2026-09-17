@@ -74,11 +74,9 @@ describe('AdminMaintenanceScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Save A-101' }));
 
     await waitFor(() =>
-      expect(mockedUpdate).toHaveBeenCalledWith(
-        { role: 'admin', username: 'admin-jane' },
-        1,
-        { monthlyMaintenanceAmount: 1800 },
-      ),
+      expect(mockedUpdate).toHaveBeenCalledWith({ token: 'test-token' }, 1, {
+        monthlyMaintenanceAmount: 1800,
+      }),
     );
   });
 
@@ -91,11 +89,19 @@ describe('AdminMaintenanceScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Active' }));
 
     expect(await screen.findByRole('button', { name: 'Inactive' })).toBeInTheDocument();
-    expect(mockedUpdate).toHaveBeenCalledWith(
-      { role: 'admin', username: 'admin-jane' },
-      1,
-      { isActive: false },
-    );
+    expect(mockedUpdate).toHaveBeenCalledWith({ token: 'test-token' }, 1, { isActive: false });
+  });
+
+  it('shows an error and leaves the flag unchanged when toggling active fails', async () => {
+    const user = userEvent.setup();
+    mockedUpdate.mockRejectedValue(new Error('Failed to update flat.'));
+    renderWithAuth(<AdminMaintenanceScreen />, { role: 'admin', username: 'admin-jane' });
+    await screen.findByText('A-101');
+
+    await user.click(screen.getByRole('button', { name: 'Active' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Failed to update flat.');
+    expect(screen.getByRole('button', { name: 'Active' })).toBeInTheDocument();
   });
 
   it('AC5: blocks a non-admin from navigating to Admin Maintenance', () => {

@@ -7,37 +7,41 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   role: Role | null;
   username: string | null;
-  login: (role: Role, username: string) => void;
+  token: string | null;
+  login: (role: Role, username: string, token: string) => void;
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-// Role and username live in client state for this shell story only because there is no
-// backend in this codebase yet; STORY-013 owns credential verification and
-// session issuance, and once wired up this provider must derive identity from
-// that server-issued session rather than trusting client-set state directly.
+// Role, username, and token are populated from the signed session the server issues on
+// login (see server/session.ts) rather than trusted client-set state: the server verifies
+// credentials and signs the session, so a client can't escalate role by forging state here.
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       isAuthenticated: role !== null,
       role,
       username,
-      login: (nextRole: Role, nextUsername: string) => {
+      token,
+      login: (nextRole: Role, nextUsername: string, nextToken: string) => {
         logger.info('auth_login', { role: nextRole });
         setRole(nextRole);
         setUsername(nextUsername);
+        setToken(nextToken);
       },
       logout: () => {
         logger.info('auth_logout', { role });
         setRole(null);
         setUsername(null);
+        setToken(null);
       },
     }),
-    [role, username],
+    [role, username, token],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
