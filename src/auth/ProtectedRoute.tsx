@@ -9,8 +9,12 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, isInitializing } = useAuth();
   const location = useLocation();
+
+  if (isInitializing) {
+    return null;
+  }
 
   if (!isAuthenticated || !role) {
     logger.warn('auth_redirect_unauthenticated', { path: location.pathname });

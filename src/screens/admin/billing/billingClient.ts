@@ -19,8 +19,8 @@ export interface Bill {
   status: 'unpaid' | 'paid';
 }
 
-// Placeholder billing client for the admin billing screen. There is no backend/API layer in
-// this codebase yet (see src/auth/credentials.ts for the same deferral); once one exists,
+// Placeholder billing client for the admin billing screen. This story added a real HTTP API
+// layer (server/app.ts) for authentication only; billing has no API yet — once one exists,
 // these must call it directly, backed by db/services/generateMonthlyBills.ts.
 export async function generateMonthlyBills(billingPeriod: string): Promise<BillGenerationSummary> {
   throw new Error(`No backend available to generate bills for ${billingPeriod} yet.`);

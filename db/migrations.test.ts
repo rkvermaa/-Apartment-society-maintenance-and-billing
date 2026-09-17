@@ -147,7 +147,7 @@ describe('core domain migrations', () => {
     }>;
     expect(foreignKeysEnabled).toBe(1);
 
-    const [role] = await db('roles').insert({ name: 'resident' }).returning('id');
+    const [role] = await db('roles').insert({ name: 'fk-enforcement-test-role' }).returning('id');
     const [flat] = await db('flats').insert({ flat_number: '101', block: 'A' }).returning('id');
     await db('users').insert({
       name: 'Jane',
@@ -172,7 +172,7 @@ describe('core domain migrations', () => {
     await db.migrate.latest();
     const history = await db('knex_migrations').select('id', 'name', 'batch').orderBy('id');
 
-    expect(history).toHaveLength(7);
+    expect(history).toHaveLength(9);
     expect(history[0]).toHaveProperty('name');
     expect(history.every((row) => typeof row.id === 'number')).toBe(true);
   });

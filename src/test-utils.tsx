@@ -14,7 +14,8 @@ export function renderWithAuth(ui: ReactElement, options: RenderWithAuthOptions 
   const authValue = {
     isAuthenticated: role !== null,
     role,
-    login: () => {},
+    isInitializing: false,
+    login: async () => null,
     logout: () => {},
   };
 
