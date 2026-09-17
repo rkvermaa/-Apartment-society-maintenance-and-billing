@@ -7,15 +7,13 @@ export interface Flat {
 }
 
 export interface Actor {
-  role: string;
-  username: string;
+  token: string;
 }
 
 function actorHeaders(actor: Actor): HeadersInit {
   return {
     'Content-Type': 'application/json',
-    'x-actor-role': actor.role,
-    'x-actor-username': actor.username,
+    Authorization: `Bearer ${actor.token}`,
   };
 }
 

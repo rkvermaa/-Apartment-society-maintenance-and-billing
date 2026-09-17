@@ -6,6 +6,7 @@ import path from 'node:path';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from './app';
+import { issueSessionToken } from './session';
 
 let db: KnexType;
 let tmpDir: string;
@@ -33,12 +34,33 @@ async function seedFlat(): Promise<number> {
   return flat.id as number;
 }
 
+const adminToken = (username = 'admin-jane') => issueSessionToken({ username, role: 'admin' });
+const residentToken = (username = 'resident-bob') => issueSessionToken({ username, role: 'resident' });
+
 describe('flats API', () => {
-  it('returns real stored flats to an admin, not a placeholder (AC1)', async () => {
+  it('issues a signed session token for valid demo credentials', async () => {
+    const app = createApp(db);
+
+    const res = await request(app).post('/api/login').send({ username: 'admin', password: 'admin123' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.role).toBe('admin');
+    expect(typeof res.body.token).toBe('string');
+  });
+
+  it('rejects a login attempt with invalid credentials', async () => {
+    const app = createApp(db);
+
+    const res = await request(app).post('/api/login').send({ username: 'admin', password: 'wrong-password' });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns real stored flats to a caller holding a valid admin session token, not a placeholder (AC1)', async () => {
     await seedFlat();
     const app = createApp(db);
 
-    const res = await request(app).get('/api/flats').set('x-actor-role', 'admin');
+    const res = await request(app).get('/api/flats').set('Authorization', `Bearer ${adminToken()}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual([
@@ -52,8 +74,7 @@ describe('flats API', () => {
 
     const res = await request(app)
       .patch(`/api/flats/${flatId}`)
-      .set('x-actor-role', 'admin')
-      .set('x-actor-username', 'admin')
+      .set('Authorization', `Bearer ${adminToken()}`)
       .send({ monthlyMaintenanceAmount: -100 });
 
     expect(res.status).toBe(400);
@@ -61,18 +82,46 @@ describe('flats API', () => {
     expect(Number(row.monthly_maintenance_amount)).toBe(1500);
   });
 
-  it('rejects a non-admin caller without returning or modifying any flat data (AC6)', async () => {
+  it('rejects a caller holding a valid resident session token without returning or modifying any flat data (AC6)', async () => {
     const flatId = await seedFlat();
     const app = createApp(db);
 
-    const listRes = await request(app).get('/api/flats').set('x-actor-role', 'resident');
+    const listRes = await request(app).get('/api/flats').set('Authorization', `Bearer ${residentToken()}`);
     const patchRes = await request(app)
       .patch(`/api/flats/${flatId}`)
-      .set('x-actor-role', 'resident')
+      .set('Authorization', `Bearer ${residentToken()}`)
       .send({ monthlyMaintenanceAmount: 2000 });
 
     expect(listRes.status).toBe(403);
     expect(listRes.body).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: flatId })]));
+    expect(patchRes.status).toBe(403);
+    const row = await db('flats').where({ id: flatId }).first();
+    expect(Number(row.monthly_maintenance_amount)).toBe(1500);
+  });
+
+  it('rejects a request with no session token at all', async () => {
+    const app = createApp(db);
+
+    const res = await request(app).get('/api/flats');
+
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects a forged token claiming an admin role, since a spoofed header alone must not grant access', async () => {
+    const flatId = await seedFlat();
+    const app = createApp(db);
+    const forgedBody = Buffer.from(JSON.stringify({ username: 'attacker', role: 'admin' })).toString(
+      'base64url',
+    );
+    const forgedToken = `${forgedBody}.not-a-real-signature`;
+
+    const listRes = await request(app).get('/api/flats').set('Authorization', `Bearer ${forgedToken}`);
+    const patchRes = await request(app)
+      .patch(`/api/flats/${flatId}`)
+      .set('Authorization', `Bearer ${forgedToken}`)
+      .send({ monthlyMaintenanceAmount: 2000 });
+
+    expect(listRes.status).toBe(403);
     expect(patchRes.status).toBe(403);
     const row = await db('flats').where({ id: flatId }).first();
     expect(Number(row.monthly_maintenance_amount)).toBe(1500);
@@ -84,8 +133,7 @@ describe('flats API', () => {
 
     await request(app)
       .patch(`/api/flats/${flatId}`)
-      .set('x-actor-role', 'admin')
-      .set('x-actor-username', 'admin-jane')
+      .set('Authorization', `Bearer ${adminToken('admin-jane')}`)
       .send({ monthlyMaintenanceAmount: 1800 });
 
     const row = await db('flats').where({ id: flatId }).first();
@@ -99,8 +147,7 @@ describe('flats API', () => {
 
     const res = await request(app)
       .patch(`/api/flats/${flatId}`)
-      .set('x-actor-role', 'admin')
-      .set('x-actor-username', 'admin')
+      .set('Authorization', `Bearer ${adminToken()}`)
       .send({ isActive: false });
 
     expect(res.status).toBe(200);
