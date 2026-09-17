@@ -38,7 +38,7 @@ describe('GET /api/bills', () => {
       due_date: '2026-02-28',
       status: 'unpaid',
     });
-    const app = createApp(db);
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
 
     const response = await request(app).get('/api/bills?month=2026-02').set('X-Demo-Role', 'admin');
 
@@ -50,7 +50,7 @@ describe('GET /api/bills', () => {
 
   it('denies a non-admin authenticated caller (AC5)', async () => {
     await db.migrate.latest();
-    const app = createApp(db);
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
 
     const response = await request(app).get('/api/bills?month=2026-02').set('X-Demo-Role', 'resident');
 
@@ -59,10 +59,19 @@ describe('GET /api/bills', () => {
 
   it('denies an unauthenticated caller with no role header (AC6)', async () => {
     await db.migrate.latest();
-    const app = createApp(db);
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
 
     const response = await request(app).get('/api/bills?month=2026-02');
 
     expect(response.status).toBe(401);
+  });
+
+  it('is not reachable at all when unverified role auth is disabled, even for an admin caller', async () => {
+    await db.migrate.latest();
+    const app = createApp(db, { unverifiedRoleAuthEnabled: false });
+
+    const response = await request(app).get('/api/bills?month=2026-02').set('X-Demo-Role', 'admin');
+
+    expect(response.status).toBe(404);
   });
 });
