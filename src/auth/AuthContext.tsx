@@ -6,33 +6,38 @@ export type Role = 'admin' | 'resident';
 export interface AuthContextValue {
   isAuthenticated: boolean;
   role: Role | null;
-  login: (role: Role) => void;
+  username: string | null;
+  login: (role: Role, username: string) => void;
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-// Role lives in client state for this shell story only because there is no
+// Role and username live in client state for this shell story only because there is no
 // backend in this codebase yet; STORY-013 owns credential verification and
-// session issuance, and once wired up this provider must derive role from
+// session issuance, and once wired up this provider must derive identity from
 // that server-issued session rather than trusting client-set state directly.
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       isAuthenticated: role !== null,
       role,
-      login: (nextRole: Role) => {
+      username,
+      login: (nextRole: Role, nextUsername: string) => {
         logger.info('auth_login', { role: nextRole });
         setRole(nextRole);
+        setUsername(nextUsername);
       },
       logout: () => {
         logger.info('auth_logout', { role });
         setRole(null);
+        setUsername(null);
       },
     }),
-    [role],
+    [role, username],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
