@@ -16,17 +16,19 @@ async function resetAdminPassword(db, { email, newPassword, performedBy }) {
   const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
   const resetAt = new Date();
 
-  await db('users').where({ id: admin.id }).update({
-    password_hash: passwordHash,
-    password_reset_at: resetAt,
-  });
+  await db.transaction(async (trx) => {
+    await trx('users').where({ id: admin.id }).update({
+      password_hash: passwordHash,
+      password_reset_at: resetAt,
+    });
 
-  await db('audit_logs').insert({
-    action: 'admin_password_reset',
-    target_user_id: admin.id,
-    target_email: email,
-    performed_by: performedBy,
-    created_at: resetAt,
+    await trx('audit_logs').insert({
+      action: 'admin_password_reset',
+      target_user_id: admin.id,
+      target_email: email,
+      performed_by: performedBy,
+      created_at: resetAt,
+    });
   });
 
   return { userId: admin.id, resetAt };

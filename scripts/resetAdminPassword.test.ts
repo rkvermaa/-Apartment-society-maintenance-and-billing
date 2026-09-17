@@ -93,4 +93,22 @@ describe('resetAdminPassword', () => {
     });
     expect(entries[0].created_at).toBeTruthy();
   });
+
+  it('rolls back the password update if the audit log write fails (AC3 atomicity)', async () => {
+    const oldHash = await bcrypt.hash('old-secret', 10);
+    await seedAdmin('admin@example.com', oldHash);
+    await db.schema.dropTable('audit_logs');
+
+    await expect(
+      resetAdminPassword(db, {
+        email: 'admin@example.com',
+        newPassword: 'new-secret-123',
+        performedBy: 'operator',
+      }),
+    ).rejects.toThrow();
+
+    const updated = await db('users').where({ email: 'admin@example.com' }).first();
+    expect(await bcrypt.compare('old-secret', updated.password_hash)).toBe(true);
+    expect(updated.password_reset_at).toBeNull();
+  });
 });
