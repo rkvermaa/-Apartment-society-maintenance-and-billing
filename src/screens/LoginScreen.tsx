@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
-import { authenticate } from '../auth/credentials';
 import { navConfigByRole } from '../shell/navConfig';
 import { logger } from '../lib/logger';
 
@@ -12,19 +11,17 @@ export function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const role = authenticate(username, password);
-    if (!role) {
+    const resolvedRole = await login(username, password);
+    if (!resolvedRole) {
       logger.warn('login_failed', { username });
       setError('Invalid username or password.');
       return;
     }
 
-    logger.info('login_succeeded', { username, role });
-    login(role);
-    navigate(navConfigByRole[role][0].path, { replace: true });
+    navigate(navConfigByRole[resolvedRole][0].path, { replace: true });
   }
 
   return (
