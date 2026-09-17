@@ -43,4 +43,18 @@ describe('LoginScreen', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Invalid username or password.');
     expect(screen.queryByTestId('app-shell')).not.toBeInTheDocument();
   });
+
+  it('presents no self-service password recovery option (AC4)', () => {
+    render(
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/login']}>
+          <App />
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+
+    expect(screen.queryByText(/forgot.*password/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /reset|recover/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /reset|recover/i })).not.toBeInTheDocument();
+  });
 });

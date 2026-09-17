@@ -11,9 +11,11 @@
     "test:watch": "vitest",
     "migrate:latest": "knex migrate:latest --knexfile db/knexfile.cjs",
     "migrate:rollback": "knex migrate:rollback --knexfile db/knexfile.cjs",
-    "migrate:list": "knex migrate:list --knexfile db/knexfile.cjs"
+    "migrate:list": "knex migrate:list --knexfile db/knexfile.cjs",
+    "admin:reset-password": "node scripts/resetAdminPassword.cjs"
   },
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "better-sqlite3": "^11.3.0",
     "knex": "^3.1.0",
     "react": "^18.3.1",
@@ -24,6 +26,7 @@
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.5.2",
+    "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.14.15",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
