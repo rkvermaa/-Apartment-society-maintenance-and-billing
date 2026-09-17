@@ -8,7 +8,7 @@ describe('authApiClient', () => {
 
   it('AC1/AC2: returns the issued token and role on a successful login', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ token: 'fake-session-token', role: 'admin' }) }));
-    const result = await login('admin', 'admin123');
+    const result = await login('admin', 'demo-admin-password');
     expect(result).toEqual({ token: 'fake-session-token', role: 'admin' });
   });
 

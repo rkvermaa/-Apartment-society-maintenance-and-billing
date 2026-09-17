@@ -26,7 +26,7 @@ describe('LoginScreen', () => {
     );
 
     await user.type(screen.getByLabelText('Username'), 'admin');
-    await user.type(screen.getByLabelText('Password'), 'admin123');
+    await user.type(screen.getByLabelText('Password'), 'demo-admin-password');
     await user.click(screen.getByRole('button', { name: 'Log in' }));
 
     expect(await screen.findByTestId('app-shell')).toBeInTheDocument();

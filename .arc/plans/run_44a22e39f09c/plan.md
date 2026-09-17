@@ -19,7 +19,7 @@ summary: |
   `isInitializing` flag on the context stops `ProtectedRoute` from redirecting a valid returning
   session before that check resolves. A "Log out" action is added to `AppShell` (nothing in the
   UI could otherwise trigger AC9's "they log out"), and the demo credentials already used by
-  `LoginScreen` (`admin`/`admin123`, `resident`/`resident123`) are preserved by seeding matching
+  `LoginScreen` (`admin`/`demo-admin-password`, `resident`/`demo-resident-password`) are preserved by seeding matching
   `users`/`roles` rows via a new data migration, so existing UI behavior for a human tester is
   unchanged even though verification is now fully server-side.
 scope:
@@ -54,7 +54,7 @@ scope:
       `requireSession` tests for on every request, matching AC6/AC9 exactly.
   - description: |
       Seed the `users`/`roles` tables with the same demo identities `LoginScreen` already uses
-      (`admin`/`admin123`, `resident`/`resident123`), as a data migration rather than a new
+      (`admin`/`demo-admin-password`, `resident`/`demo-resident-password`), as a data migration rather than a new
       `knex seed:run` subsystem, so it runs automatically with the existing `migrate:latest`
       workflow. Password hashing here is a small, deliberately duplicated copy of
       `server/auth/password.ts`'s scrypt logic (see `notes` for why it isn't shared).
@@ -70,8 +70,8 @@ scope:
       }
 
       const DEMO_USERS = [
-        { name: 'Demo Admin', email: 'admin', password: 'admin123', role: 'admin' },
-        { name: 'Demo Resident', email: 'resident', password: 'resident123', role: 'resident' },
+        { name: 'Demo Admin', email: 'admin', password: 'demo-admin-password', role: 'admin' },
+        { name: 'Demo Resident', email: 'resident', password: 'demo-resident-password', role: 'resident' },
       ];
 
       exports.up = async function up(knex) {
@@ -171,12 +171,12 @@ scope:
 
       describe('password hashing', () => {
         it('verifies a matching password against its stored hash', () => {
-          const stored = hashPassword('admin123');
-          expect(verifyPassword('admin123', stored)).toBe(true);
+          const stored = hashPassword('demo-admin-password');
+          expect(verifyPassword('demo-admin-password', stored)).toBe(true);
         });
 
         it('rejects a non-matching password', () => {
-          const stored = hashPassword('admin123');
+          const stored = hashPassword('demo-admin-password');
           expect(verifyPassword('wrong-password', stored)).toBe(false);
         });
       });
@@ -486,7 +486,7 @@ scope:
 
       describe('auth API', () => {
         it('AC1: issues a session token for valid admin credentials', async () => {
-          const res = await request(createApp(db)).post('/api/auth/login').send({ username: 'admin', password: 'admin123' });
+          const res = await request(createApp(db)).post('/api/auth/login').send({ username: 'admin', password: 'demo-admin-password' });
           expect(res.status).toBe(200);
           expect(typeof res.body.token).toBe('string');
           expect(res.body.token.length).toBeGreaterThan(0);
@@ -501,7 +501,7 @@ scope:
 
         it('AC5: authenticates a subsequent request using the issued token', async () => {
           const app = createApp(db);
-          const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'admin123' });
+          const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'demo-admin-password' });
           const sessionRes = await request(app).get('/api/auth/session').set('Authorization', `Bearer ${loginRes.body.token}`);
           expect(sessionRes.status).toBe(200);
           expect(sessionRes.body.role).toBe('admin');
@@ -520,7 +520,7 @@ scope:
 
         it('AC9: rejects a request with a token after logout', async () => {
           const app = createApp(db);
-          const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'admin123' });
+          const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'demo-admin-password' });
           const token = loginRes.body.token;
           await request(app).post('/api/auth/logout').set('Authorization', `Bearer ${token}`).expect(204);
           const res = await request(app).get('/api/auth/session').set('Authorization', `Bearer ${token}`);
@@ -650,7 +650,7 @@ scope:
 
         it('AC1/AC2: returns the issued token and role on a successful login', async () => {
           vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ token: 'abc123', role: 'admin' }) }));
-          const result = await login('admin', 'admin123');
+          const result = await login('admin', 'demo-admin-password');
           expect(result).toEqual({ token: 'abc123', role: 'admin' });
         });
 
@@ -1034,7 +1034,7 @@ scope:
           );
 
           await user.type(screen.getByLabelText('Username'), 'admin');
-          await user.type(screen.getByLabelText('Password'), 'admin123');
+          await user.type(screen.getByLabelText('Password'), 'demo-admin-password');
           await user.click(screen.getByRole('button', { name: 'Log in' }));
 
           expect(await screen.findByTestId('app-shell')).toBeInTheDocument();
@@ -1103,7 +1103,7 @@ tests:
   - |
     AC1 — a valid admin login issues a session token:
     ```ts
-    const res = await request(createApp(db)).post('/api/auth/login').send({ username: 'admin', password: 'admin123' });
+    const res = await request(createApp(db)).post('/api/auth/login').send({ username: 'admin', password: 'demo-admin-password' });
     expect(res.status).toBe(200);
     expect(typeof res.body.token).toBe('string');
     ```
@@ -1182,7 +1182,7 @@ assumptions_or_open_questions:
     parent epic's next story (a real billing/maintenance API) is expected to build directly on
     this app and its `requireSession`/`requireRole` middleware.
   - |
-    Demo credentials (`admin`/`admin123`, `resident`/`resident123`) are preserved by seeding
+    Demo credentials (`admin`/`demo-admin-password`, `resident`/`demo-resident-password`) are preserved by seeding
     matching `users`/`roles` rows via a new data migration, using the existing `email` column to
     hold the plain username string. This keeps `LoginScreen`'s existing UI values working
     end-to-end against the real backend without inventing a separate username column or changing

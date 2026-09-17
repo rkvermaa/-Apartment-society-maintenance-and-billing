@@ -7,8 +7,8 @@ function hashPassword(password) {
 }
 
 const DEMO_USERS = [
-  { name: 'Demo Admin', email: 'admin', password: 'admin123', role: 'admin' },
-  { name: 'Demo Resident', email: 'resident', password: 'resident123', role: 'resident' },
+  { name: 'Demo Admin', email: 'admin', password: 'demo-admin-password', role: 'admin' },
+  { name: 'Demo Resident', email: 'resident', password: 'demo-resident-password', role: 'resident' },
 ];
 
 exports.up = async function up(knex) {

@@ -28,7 +28,7 @@ afterEach(async () => {
 
 describe('auth API', () => {
   it('AC1: issues a session token for valid admin credentials', async () => {
-    const res = await request(createApp(db)).post('/api/auth/login').send({ username: 'admin', password: 'admin123' });
+    const res = await request(createApp(db)).post('/api/auth/login').send({ username: 'admin', password: 'demo-admin-password' });
     expect(res.status).toBe(200);
     expect(typeof res.body.token).toBe('string');
     expect(res.body.token.length).toBeGreaterThan(0);
@@ -43,7 +43,7 @@ describe('auth API', () => {
 
   it('AC5: authenticates a subsequent request using the issued token', async () => {
     const app = createApp(db);
-    const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'admin123' });
+    const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'demo-admin-password' });
     const sessionRes = await request(app).get('/api/auth/session').set('Authorization', `Bearer ${loginRes.body.token}`);
     expect(sessionRes.status).toBe(200);
     expect(sessionRes.body.role).toBe('admin');
@@ -62,7 +62,7 @@ describe('auth API', () => {
 
   it('AC9: rejects a request with a token after logout', async () => {
     const app = createApp(db);
-    const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'admin123' });
+    const loginRes = await request(app).post('/api/auth/login').send({ username: 'admin', password: 'demo-admin-password' });
     const token = loginRes.body.token;
     await request(app).post('/api/auth/logout').set('Authorization', `Bearer ${token}`).expect(204);
     const res = await request(app).get('/api/auth/session').set('Authorization', `Bearer ${token}`);
