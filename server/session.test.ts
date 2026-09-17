@@ -1,6 +1,23 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { issueSessionToken, loginWithCredentials, verifySessionToken } from './session';
+
+describe('session secret configuration', () => {
+  const originalSecret = process.env.SESSION_SECRET;
+
+  afterEach(() => {
+    process.env.SESSION_SECRET = originalSecret;
+  });
+
+  it('refuses to sign or verify sessions without a hardcoded fallback secret when SESSION_SECRET is unset', async () => {
+    delete process.env.SESSION_SECRET;
+    vi.resetModules();
+
+    await expect(import('./session')).rejects.toThrow(
+      'SESSION_SECRET environment variable is required',
+    );
+  });
+});
 
 describe('session', () => {
   it('round-trips a signed session token', () => {

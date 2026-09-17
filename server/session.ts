@@ -2,7 +2,10 @@ import crypto from 'node:crypto';
 import { authenticate } from '../src/auth/credentials';
 import type { Role } from '../src/auth/AuthContext';
 
-const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-only-insecure-session-secret';
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) {
+  throw new Error('SESSION_SECRET environment variable is required');
+}
 
 export interface SessionPayload {
   username: string;

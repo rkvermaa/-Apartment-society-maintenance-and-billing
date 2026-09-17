@@ -16,5 +16,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/vitest.setup.ts'],
+    env: {
+      SESSION_SECRET: 'test-only-session-secret',
+    },
   },
 });
