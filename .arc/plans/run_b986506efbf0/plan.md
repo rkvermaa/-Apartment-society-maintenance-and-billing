@@ -120,7 +120,7 @@ scope:
 
           await resetAdminPassword(db, {
             email: 'admin@example.com',
-            newPassword: 'new-secret-123',
+            newPassword: NEW_TEST_PASSWORD,
             performedBy: 'operator',
           });
 
@@ -133,7 +133,7 @@ scope:
           await expect(
             resetAdminPassword(db, {
               email: 'missing@example.com',
-              newPassword: 'new-secret-123',
+              newPassword: NEW_TEST_PASSWORD,
               performedBy: 'operator',
             }),
           ).rejects.toThrow('No admin user found with email "missing@example.com"');
@@ -145,7 +145,7 @@ scope:
 
           await resetAdminPassword(db, {
             email: 'admin@example.com',
-            newPassword: 'new-secret-123',
+            newPassword: NEW_TEST_PASSWORD,
             performedBy: 'operator',
           });
 
@@ -159,7 +159,7 @@ scope:
 
           await resetAdminPassword(db, {
             email: 'admin@example.com',
-            newPassword: 'new-secret-123',
+            newPassword: NEW_TEST_PASSWORD,
             performedBy: 'operator',
           });
 
@@ -298,7 +298,7 @@ tests:
   - |
     AC1 — the CLI-updated hash verifies against the new password and no longer against the old one:
     ```ts
-    await resetAdminPassword(db, { email: 'admin@example.com', newPassword: 'new-secret-123', performedBy: 'operator' });
+    await resetAdminPassword(db, { email: 'admin@example.com', newPassword: NEW_TEST_PASSWORD, performedBy: 'operator' });
     const updated = await db('users').where({ email: 'admin@example.com' }).first();
     expect(await bcrypt.compare('new-secret-123', updated.password_hash)).toBe(true);
     expect(await bcrypt.compare('old-secret', updated.password_hash)).toBe(false);
