@@ -1,9 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
-import { authenticate } from '../auth/credentials';
+import type { Role } from '../auth/AuthContext';
 import { navConfigByRole } from '../shell/navConfig';
 import { logger } from '../lib/logger';
+
+interface SessionResponse {
+  token: string;
+  role: Role;
+  username: string;
+}
 
 export function LoginScreen() {
   const { login } = useAuth();
@@ -12,19 +18,25 @@ export function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const role = authenticate(username, password);
-    if (!role) {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!res.ok) {
       logger.warn('login_failed', { username });
       setError('Invalid username or password.');
       return;
     }
 
-    logger.info('login_succeeded', { username, role });
-    login(role);
-    navigate(navConfigByRole[role][0].path, { replace: true });
+    const session = (await res.json()) as SessionResponse;
+    logger.info('login_succeeded', { username: session.username, role: session.role });
+    login(session.role, session.username, session.token);
+    navigate(navConfigByRole[session.role][0].path, { replace: true });
   }
 
   return (
