@@ -75,3 +75,93 @@ describe('GET /api/bills', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('GET /api/bills/mine', () => {
+  it('returns only the calling resident flat bills (AC1)', async () => {
+    await db.migrate.latest();
+    const [flat] = await db('flats')
+      .insert({ flat_number: '101', block: 'A', is_active: true, monthly_maintenance_amount: 1500 })
+      .returning('id');
+    await db('bills').insert({
+      flat_id: flat.id,
+      billing_period: '2026-02',
+      amount: 1500,
+      due_date: '2026-02-28',
+      status: 'unpaid',
+    });
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
+
+    const response = await request(app)
+      .get('/api/bills/mine')
+      .set('X-Demo-Role', 'resident')
+      .set('X-Demo-Flat-Id', String(flat.id));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([expect.objectContaining({ billingPeriod: '2026-02', status: 'unpaid' })]);
+  });
+
+  it('excludes bills belonging to other flats', async () => {
+    await db.migrate.latest();
+    const [flat] = await db('flats')
+      .insert({ flat_number: '101', block: 'A', is_active: true, monthly_maintenance_amount: 1500 })
+      .returning('id');
+    const [otherFlat] = await db('flats')
+      .insert({ flat_number: '102', block: 'A', is_active: true, monthly_maintenance_amount: 1500 })
+      .returning('id');
+    await db('bills').insert({
+      flat_id: otherFlat.id,
+      billing_period: '2026-02',
+      amount: 1500,
+      due_date: '2026-02-28',
+      status: 'unpaid',
+    });
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
+
+    const response = await request(app)
+      .get('/api/bills/mine')
+      .set('X-Demo-Role', 'resident')
+      .set('X-Demo-Flat-Id', String(flat.id));
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([]);
+  });
+
+  it('denies a non-resident authenticated caller', async () => {
+    await db.migrate.latest();
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
+
+    const response = await request(app).get('/api/bills/mine').set('X-Demo-Role', 'admin').set('X-Demo-Flat-Id', '1');
+
+    expect(response.status).toBe(403);
+  });
+
+  it('denies an unauthenticated caller with no role header', async () => {
+    await db.migrate.latest();
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
+
+    const response = await request(app).get('/api/bills/mine').set('X-Demo-Flat-Id', '1');
+
+    expect(response.status).toBe(401);
+  });
+
+  it('rejects a missing or invalid flat id with a 400', async () => {
+    await db.migrate.latest();
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
+
+    const response = await request(app).get('/api/bills/mine').set('X-Demo-Role', 'resident');
+
+    expect(response.status).toBe(400);
+  });
+
+  it('is not reachable at all when unverified role auth is disabled, even for a resident caller', async () => {
+    await db.migrate.latest();
+    const app = createApp(db, { unverifiedRoleAuthEnabled: false });
+
+    const response = await request(app)
+      .get('/api/bills/mine')
+      .set('X-Demo-Role', 'resident')
+      .set('X-Demo-Flat-Id', '1');
+
+    expect(response.status).toBe(404);
+  });
+});

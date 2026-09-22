@@ -6,7 +6,8 @@ export type Role = 'admin' | 'resident';
 export interface AuthContextValue {
   isAuthenticated: boolean;
   role: Role | null;
-  login: (role: Role) => void;
+  flatId: number | null;
+  login: (role: Role, flatId?: number | null) => void;
   logout: () => void;
 }
 
@@ -18,21 +19,25 @@ export const AuthContext = createContext<AuthContextValue | undefined>(undefined
 // that server-issued session rather than trusting client-set state directly.
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(null);
+  const [flatId, setFlatId] = useState<number | null>(null);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       isAuthenticated: role !== null,
       role,
-      login: (nextRole: Role) => {
+      flatId,
+      login: (nextRole: Role, nextFlatId: number | null = null) => {
         logger.info('auth_login', { role: nextRole });
         setRole(nextRole);
+        setFlatId(nextFlatId);
       },
       logout: () => {
         logger.info('auth_logout', { role });
         setRole(null);
+        setFlatId(null);
       },
     }),
-    [role],
+    [role, flatId],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

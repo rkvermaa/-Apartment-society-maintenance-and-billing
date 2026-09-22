@@ -5,15 +5,17 @@ import { AuthContext, type Role } from './auth/AuthContext';
 
 interface RenderWithAuthOptions {
   role?: Role | null;
+  flatId?: number | null;
   initialEntries?: string[];
 }
 
 export function renderWithAuth(ui: ReactElement, options: RenderWithAuthOptions = {}) {
-  const { role = null, initialEntries = ['/'] } = options;
+  const { role = null, flatId = null, initialEntries = ['/'] } = options;
 
   const authValue = {
     isAuthenticated: role !== null,
     role,
+    flatId,
     login: () => {},
     logout: () => {},
   };

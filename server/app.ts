@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Knex } from 'knex';
 import { listBillsForMonth } from '../db/services/listBillsForMonth';
+import { listBillsForFlat } from '../db/services/listBillsForFlat';
 import { requireRole } from './auth';
 
 const MONTH_PATTERN = /^\d{4}-\d{2}$/;
@@ -30,6 +31,22 @@ export function createApp(db: Knex, options: CreateAppOptions) {
         res.json(bills);
       } catch (err) {
         console.error(`Failed to load bills for month ${month}:`, err);
+        res.status(500).json({ error: 'Failed to load bills.' });
+      }
+    });
+
+    app.get('/api/bills/mine', requireRole('resident'), async (req, res) => {
+      const flatId = Number(req.header('x-demo-flat-id'));
+      if (!Number.isInteger(flatId) || flatId <= 0) {
+        res.status(400).json({ error: 'A valid flat is required.' });
+        return;
+      }
+
+      try {
+        const bills = await listBillsForFlat(db, flatId);
+        res.json(bills);
+      } catch (err) {
+        console.error(`Failed to load bills for flat ${flatId}:`, err);
         res.status(500).json({ error: 'Failed to load bills.' });
       }
     });

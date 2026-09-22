@@ -15,15 +15,16 @@ export function LoginScreen() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const role = authenticate(username, password);
-    if (!role) {
+    const authResult = authenticate(username, password);
+    if (!authResult) {
       logger.warn('login_failed', { username });
       setError('Invalid username or password.');
       return;
     }
 
+    const { role, flatId } = authResult;
     logger.info('login_succeeded', { username, role });
-    login(role);
+    login(role, flatId);
     navigate(navConfigByRole[role][0].path, { replace: true });
   }
 
