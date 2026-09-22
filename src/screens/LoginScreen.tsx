@@ -24,7 +24,7 @@ export function LoginScreen() {
 
     const { role, flatId } = authResult;
     logger.info('login_succeeded', { username, role });
-    login(role, flatId);
+    login(role, flatId, username);
     navigate(navConfigByRole[role][0].path, { replace: true });
   }
 

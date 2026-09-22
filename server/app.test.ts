@@ -94,6 +94,7 @@ describe('GET /api/bills/mine', () => {
     const response = await request(app)
       .get('/api/bills/mine')
       .set('X-Demo-Role', 'resident')
+      .set('X-Demo-Username', 'resident')
       .set('X-Demo-Flat-Id', String(flat.id));
 
     expect(response.status).toBe(200);
@@ -120,17 +121,49 @@ describe('GET /api/bills/mine', () => {
     const response = await request(app)
       .get('/api/bills/mine')
       .set('X-Demo-Role', 'resident')
+      .set('X-Demo-Username', 'resident')
       .set('X-Demo-Flat-Id', String(flat.id));
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual([]);
   });
 
+  it('denies a resident from reading another flat by tampering with the flat id header (IDOR)', async () => {
+    await db.migrate.latest();
+    const [myFlat] = await db('flats')
+      .insert({ flat_number: '101', block: 'A', is_active: true, monthly_maintenance_amount: 1500 })
+      .returning('id');
+    const [otherFlat] = await db('flats')
+      .insert({ flat_number: '102', block: 'A', is_active: true, monthly_maintenance_amount: 1500 })
+      .returning('id');
+    await db('bills').insert({
+      flat_id: otherFlat.id,
+      billing_period: '2026-02',
+      amount: 1500,
+      due_date: '2026-02-28',
+      status: 'unpaid',
+    });
+    expect(myFlat.id).not.toBe(otherFlat.id);
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
+
+    const response = await request(app)
+      .get('/api/bills/mine')
+      .set('X-Demo-Role', 'resident')
+      .set('X-Demo-Username', 'resident')
+      .set('X-Demo-Flat-Id', String(otherFlat.id));
+
+    expect(response.status).toBe(403);
+  });
+
   it('denies a non-resident authenticated caller', async () => {
     await db.migrate.latest();
     const app = createApp(db, { unverifiedRoleAuthEnabled: true });
 
-    const response = await request(app).get('/api/bills/mine').set('X-Demo-Role', 'admin').set('X-Demo-Flat-Id', '1');
+    const response = await request(app)
+      .get('/api/bills/mine')
+      .set('X-Demo-Role', 'admin')
+      .set('X-Demo-Username', 'admin')
+      .set('X-Demo-Flat-Id', '1');
 
     expect(response.status).toBe(403);
   });
@@ -144,11 +177,23 @@ describe('GET /api/bills/mine', () => {
     expect(response.status).toBe(401);
   });
 
+  it('denies a role-bearing caller with no identity header to resolve their flat', async () => {
+    await db.migrate.latest();
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
+
+    const response = await request(app).get('/api/bills/mine').set('X-Demo-Role', 'resident').set('X-Demo-Flat-Id', '1');
+
+    expect(response.status).toBe(401);
+  });
+
   it('rejects a missing or invalid flat id with a 400', async () => {
     await db.migrate.latest();
     const app = createApp(db, { unverifiedRoleAuthEnabled: true });
 
-    const response = await request(app).get('/api/bills/mine').set('X-Demo-Role', 'resident');
+    const response = await request(app)
+      .get('/api/bills/mine')
+      .set('X-Demo-Role', 'resident')
+      .set('X-Demo-Username', 'resident');
 
     expect(response.status).toBe(400);
   });
@@ -160,6 +205,7 @@ describe('GET /api/bills/mine', () => {
     const response = await request(app)
       .get('/api/bills/mine')
       .set('X-Demo-Role', 'resident')
+      .set('X-Demo-Username', 'resident')
       .set('X-Demo-Flat-Id', '1');
 
     expect(response.status).toBe(404);

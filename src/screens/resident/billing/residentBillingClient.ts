@@ -7,13 +7,18 @@ export interface Bill {
   status: 'unpaid' | 'paid';
 }
 
-export async function listMyBills(role: Role | null, flatId: number | null): Promise<Bill[]> {
+export async function listMyBills(
+  role: Role | null,
+  flatId: number | null,
+  username: string | null,
+): Promise<Bill[]> {
   let response: Response;
   try {
     response = await fetch('/api/bills/mine', {
       headers: {
         ...(role ? { 'X-Demo-Role': role } : {}),
         ...(flatId != null ? { 'X-Demo-Flat-Id': String(flatId) } : {}),
+        ...(username ? { 'X-Demo-Username': username } : {}),
       },
     });
   } catch {

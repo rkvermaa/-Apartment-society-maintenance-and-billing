@@ -2,7 +2,7 @@ import express from 'express';
 import type { Knex } from 'knex';
 import { listBillsForMonth } from '../db/services/listBillsForMonth';
 import { listBillsForFlat } from '../db/services/listBillsForFlat';
-import { requireRole } from './auth';
+import { requireRole, requireResidentFlat, type ResidentFlatRequest } from './auth';
 
 const MONTH_PATTERN = /^\d{4}-\d{2}$/;
 
@@ -35,18 +35,23 @@ export function createApp(db: Knex, options: CreateAppOptions) {
       }
     });
 
-    app.get('/api/bills/mine', requireRole('resident'), async (req, res) => {
-      const flatId = Number(req.header('x-demo-flat-id'));
-      if (!Number.isInteger(flatId) || flatId <= 0) {
+    app.get('/api/bills/mine', requireRole('resident'), requireResidentFlat(), async (req: ResidentFlatRequest, res) => {
+      const requestedFlatId = Number(req.header('x-demo-flat-id'));
+      if (!Number.isInteger(requestedFlatId) || requestedFlatId <= 0) {
         res.status(400).json({ error: 'A valid flat is required.' });
         return;
       }
 
+      if (requestedFlatId !== req.demoResidentFlatId) {
+        res.status(403).json({ error: 'You do not have permission to view this flat.' });
+        return;
+      }
+
       try {
-        const bills = await listBillsForFlat(db, flatId);
+        const bills = await listBillsForFlat(db, requestedFlatId);
         res.json(bills);
       } catch (err) {
-        console.error(`Failed to load bills for flat ${flatId}:`, err);
+        console.error(`Failed to load bills for flat ${requestedFlatId}:`, err);
         res.status(500).json({ error: 'Failed to load bills.' });
       }
     });

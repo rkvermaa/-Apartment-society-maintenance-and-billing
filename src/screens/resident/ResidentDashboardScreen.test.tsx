@@ -17,16 +17,16 @@ beforeEach(() => {
 describe('ResidentDashboardScreen', () => {
   it('shows the resident flat bills and outstanding dues from live data (AC1)', async () => {
     mockedListMyBills.mockResolvedValue([{ id: 1, billingPeriod: '2026-02', amount: 1500, status: 'unpaid' }]);
-    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12 });
+    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12, username: 'resident' });
 
     expect(await screen.findByText('2026-02 — 1500 — unpaid')).toBeInTheDocument();
     expect(screen.getByText('Outstanding dues: 1500')).toBeInTheDocument();
-    expect(mockedListMyBills).toHaveBeenCalledWith('resident', 12);
+    expect(mockedListMyBills).toHaveBeenCalledWith('resident', 12, 'resident');
   });
 
   it('shows a friendly empty state when the flat has no bills yet (AC2)', async () => {
     mockedListMyBills.mockResolvedValue([]);
-    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12 });
+    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12, username: 'resident' });
 
     expect(await screen.findByText('No bills yet for your flat.')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -35,7 +35,7 @@ describe('ResidentDashboardScreen', () => {
   it('shows a retryable error state when bills fail to load (AC3)', async () => {
     const user = userEvent.setup();
     mockedListMyBills.mockRejectedValueOnce(new Error('Unable to load bills. Please try again.'));
-    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12 });
+    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12, username: 'resident' });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load bills. Please try again.');
 
@@ -52,7 +52,7 @@ describe('ResidentDashboardScreen', () => {
         resolveList = resolve;
       }),
     );
-    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12 });
+    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12, username: 'resident' });
 
     expect(screen.getByRole('status')).toHaveTextContent(/loading/i);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -63,9 +63,9 @@ describe('ResidentDashboardScreen', () => {
 
   it('renders the same bills data the payments screen would (AC5)', async () => {
     mockedListMyBills.mockResolvedValue([{ id: 3, billingPeriod: '2026-04', amount: 1800, status: 'paid' }]);
-    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12 });
+    renderWithAuth(<ResidentDashboardScreen />, { role: 'resident', flatId: 12, username: 'resident' });
 
     expect(await screen.findByText('2026-04 — 1800 — paid')).toBeInTheDocument();
-    expect(mockedListMyBills).toHaveBeenCalledWith('resident', 12);
+    expect(mockedListMyBills).toHaveBeenCalledWith('resident', 12, 'resident');
   });
 });

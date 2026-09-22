@@ -10,7 +10,7 @@ export interface ResidentBillsState {
 }
 
 export function useResidentBills(): ResidentBillsState {
-  const { role, flatId } = useAuth();
+  const { role, flatId, username } = useAuth();
   const [status, setStatus] = useState<'loading' | 'error' | 'ready'>('loading');
   const [bills, setBills] = useState<Bill[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -19,13 +19,13 @@ export function useResidentBills(): ResidentBillsState {
     setStatus('loading');
     setErrorMessage(null);
     try {
-      setBills(await listMyBills(role, flatId));
+      setBills(await listMyBills(role, flatId, username));
       setStatus('ready');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to load bills. Please try again.');
       setStatus('error');
     }
-  }, [role, flatId]);
+  }, [role, flatId, username]);
 
   useEffect(() => {
     load();
