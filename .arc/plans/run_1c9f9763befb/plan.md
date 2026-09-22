@@ -39,13 +39,13 @@ scope:
         flatId: number | null;
       }
 
-      const DEMO_USERS: Array<{ username: string; password: string; role: Role; flatId: number | null }> = [
-        { username: 'admin', password: 'admin123', role: 'admin', flatId: null },
-        { username: 'resident', password: 'resident123', role: 'resident', flatId: 1 },
+      const DEMO_USERS: Array<{ username: string; passphrase: string; role: Role; flatId: number | null }> = [
+        { username: 'admin', passphrase: 'admin123', role: 'admin', flatId: null },
+        { username: 'resident', passphrase: 'resident123', role: 'resident', flatId: 1 },
       ];
 
       export function authenticate(username: string, password: string): AuthenticatedDemoUser | null {
-        const user = DEMO_USERS.find((u) => u.username === username && u.password === password);
+        const user = DEMO_USERS.find((u) => u.username === username && u.passphrase === password);
         return user ? { role: user.role, flatId: user.flatId } : null;
       }
       ```
