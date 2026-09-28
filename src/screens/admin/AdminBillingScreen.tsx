@@ -96,6 +96,11 @@ export function AdminBillingScreen() {
           {bills.map((bill) => (
             <li key={bill.id}>
               {bill.flatLabel} — {bill.status}
+              {bill.status === 'paid' && bill.paidByResidentName && bill.paidAt && (
+                <p>
+                  Paid by {bill.paidByResidentName} on {bill.paidAt}
+                </p>
+              )}
             </li>
           ))}
         </ul>

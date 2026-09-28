@@ -19,6 +19,8 @@ export interface Bill {
   billingPeriod: string;
   amount: number;
   status: 'unpaid' | 'paid';
+  paidByResidentName?: string | null;
+  paidAt?: string | null;
 }
 
 // Placeholder: bill generation has no backing endpoint yet (see server/app.ts, which currently

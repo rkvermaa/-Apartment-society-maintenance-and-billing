@@ -48,6 +48,40 @@ describe('GET /api/bills', () => {
     ]);
   });
 
+  it('includes resident payment audit fields when a bill has been paid (AC1, AC2)', async () => {
+    await db.migrate.latest();
+    const [role] = await db('roles').insert({ name: 'resident' }).returning('id');
+    const [flat] = await db('flats')
+      .insert({ flat_number: '101', block: 'A', is_active: true, monthly_maintenance_amount: 1500 })
+      .returning('id');
+    const [resident] = await db('users')
+      .insert({
+        name: 'Jane Doe',
+        email: 'jane@example.com',
+        password_hash: 'hash',
+        role_id: role.id,
+        flat_id: flat.id,
+      })
+      .returning('id');
+    const [bill] = await db('bills')
+      .insert({ flat_id: flat.id, billing_period: '2026-02', amount: 1500, due_date: '2026-02-28', status: 'paid' })
+      .returning('id');
+    await db('payments').insert({
+      bill_id: bill.id,
+      amount: 1500,
+      paid_at: '2026-02-15T10:00:00.000Z',
+      method: 'cash',
+      recorded_by_user_id: resident.id,
+    });
+    const app = createApp(db, { unverifiedRoleAuthEnabled: true });
+
+    const response = await request(app).get('/api/bills?month=2026-02').set('X-Demo-Role', 'admin');
+
+    expect(response.body).toEqual([
+      expect.objectContaining({ status: 'paid', paidByResidentName: 'Jane Doe', paidAt: '2026-02-15T10:00:00.000Z' }),
+    ]);
+  });
+
   it('denies a non-admin authenticated caller (AC5)', async () => {
     await db.migrate.latest();
     const app = createApp(db, { unverifiedRoleAuthEnabled: true });

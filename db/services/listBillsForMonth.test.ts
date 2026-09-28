@@ -45,6 +45,24 @@ async function seedBill(
   });
 }
 
+async function seedResident(
+  flatId: number,
+  overrides: Partial<{ name: string; email: string }> = {},
+): Promise<number> {
+  const [role] = await db('roles').insert({ name: 'resident' }).returning('id');
+  const [user] = await db('users')
+    .insert({
+      name: 'Jane Doe',
+      email: 'jane@example.com',
+      password_hash: 'hash',
+      role_id: role.id,
+      flat_id: flatId,
+      ...overrides,
+    })
+    .returning('id');
+  return user.id as number;
+}
+
 describe('listBillsForMonth', () => {
   it('returns the bills for the requested month, with a flat label and status (AC1)', async () => {
     await db.migrate.latest();
@@ -76,5 +94,57 @@ describe('listBillsForMonth', () => {
 
     expect(bills).toHaveLength(1);
     expect(bills[0].billingPeriod).toBe('2026-02');
+  });
+
+  it('shows a bill as paid once a resident has recorded a payment on it (AC1)', async () => {
+    await db.migrate.latest();
+    const flatId = await seedFlat();
+    const residentId = await seedResident(flatId);
+    const [bill] = await db('bills')
+      .insert({ flat_id: flatId, billing_period: '2026-02', amount: 1500, due_date: '2026-02-28', status: 'paid' })
+      .returning('id');
+    await db('payments').insert({
+      bill_id: bill.id,
+      amount: 1500,
+      paid_at: '2026-02-15T10:00:00.000Z',
+      method: 'cash',
+      recorded_by_user_id: residentId,
+    });
+
+    const bills = await listBillsForMonth(db, '2026-02');
+
+    expect(bills).toEqual([expect.objectContaining({ status: 'paid' })]);
+  });
+
+  it('includes the acting resident and payment timestamp for audit purposes (AC2)', async () => {
+    await db.migrate.latest();
+    const flatId = await seedFlat();
+    const residentId = await seedResident(flatId, { name: 'Jane Doe', email: 'jane2@example.com' });
+    const [bill] = await db('bills')
+      .insert({ flat_id: flatId, billing_period: '2026-02', amount: 1500, due_date: '2026-02-28', status: 'paid' })
+      .returning('id');
+    await db('payments').insert({
+      bill_id: bill.id,
+      amount: 1500,
+      paid_at: '2026-02-15T10:00:00.000Z',
+      method: 'cash',
+      recorded_by_user_id: residentId,
+    });
+
+    const bills = await listBillsForMonth(db, '2026-02');
+
+    expect(bills[0]).toEqual(
+      expect.objectContaining({ paidByResidentName: 'Jane Doe', paidAt: '2026-02-15T10:00:00.000Z' }),
+    );
+  });
+
+  it('returns null audit fields for a bill with no recorded payment', async () => {
+    await db.migrate.latest();
+    const flatId = await seedFlat();
+    await seedBill(flatId, { status: 'unpaid' });
+
+    const bills = await listBillsForMonth(db, '2026-02');
+
+    expect(bills[0]).toEqual(expect.objectContaining({ paidByResidentName: null, paidAt: null }));
   });
 });

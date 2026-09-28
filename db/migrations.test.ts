@@ -149,20 +149,28 @@ describe('core domain migrations', () => {
 
     const [role] = await db('roles').insert({ name: 'resident' }).returning('id');
     const [flat] = await db('flats').insert({ flat_number: '101', block: 'A' }).returning('id');
-    await db('users').insert({
-      name: 'Jane',
-      email: 'jane@example.com',
-      password_hash: 'hash',
-      role_id: role.id,
-      flat_id: flat.id,
-    });
+    const [user] = await db('users')
+      .insert({
+        name: 'Jane',
+        email: 'jane@example.com',
+        password_hash: 'hash',
+        role_id: role.id,
+        flat_id: flat.id,
+      })
+      .returning('id');
 
     await expect(db('roles').where({ id: role.id }).delete()).rejects.toThrow();
 
     const [bill] = await db('bills')
       .insert({ flat_id: flat.id, billing_period: '2026-01', amount: '100.00', due_date: '2026-01-31' })
       .returning('id');
-    await db('payments').insert({ bill_id: bill.id, amount: '100.00', paid_at: new Date(), method: 'cash' });
+    await db('payments').insert({
+      bill_id: bill.id,
+      amount: '100.00',
+      paid_at: new Date(),
+      method: 'cash',
+      recorded_by_user_id: user.id,
+    });
 
     await db('bills').where({ id: bill.id }).delete();
     expect(await db('payments').where({ bill_id: bill.id })).toHaveLength(0);
@@ -172,7 +180,7 @@ describe('core domain migrations', () => {
     await db.migrate.latest();
     const history = await db('knex_migrations').select('id', 'name', 'batch').orderBy('id');
 
-    expect(history).toHaveLength(7);
+    expect(history).toHaveLength(8);
     expect(history[0]).toHaveProperty('name');
     expect(history.every((row) => typeof row.id === 'number')).toBe(true);
   });

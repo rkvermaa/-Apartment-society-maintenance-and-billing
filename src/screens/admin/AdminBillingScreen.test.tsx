@@ -161,4 +161,32 @@ describe('AdminBillingScreen', () => {
 
     expect(await screen.findByText('C-303 — unpaid')).toBeInTheDocument();
   });
+
+  it('shows the acting resident and payment timestamp for a paid bill (AC1, AC2)', async () => {
+    mockedList.mockResolvedValue([
+      {
+        id: 3,
+        flatLabel: 'A-101',
+        billingPeriod: '2026-02',
+        amount: 1500,
+        status: 'paid',
+        paidByResidentName: 'Jane Doe',
+        paidAt: '2026-02-15T10:00:00.000Z',
+      },
+    ]);
+    renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
+
+    expect(await screen.findByText('A-101 — paid')).toBeInTheDocument();
+    expect(screen.getByText('Paid by Jane Doe on 2026-02-15T10:00:00.000Z')).toBeInTheDocument();
+  });
+
+  it('does not show payment audit info for an unpaid bill', async () => {
+    mockedList.mockResolvedValue([
+      { id: 4, flatLabel: 'B-202', billingPeriod: '2026-02', amount: 1500, status: 'unpaid' },
+    ]);
+    renderWithAuth(<AdminBillingScreen />, { role: 'admin' });
+
+    expect(await screen.findByText('B-202 — unpaid')).toBeInTheDocument();
+    expect(screen.queryByText(/Paid by/)).not.toBeInTheDocument();
+  });
 });
