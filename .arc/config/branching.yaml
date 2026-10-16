@@ -1,0 +1,8 @@
+# Branching policy (ADR-0121). Only the copy on the repo's DEFAULT branch (`main`) counts.
+version: 1
+
+# github-flow: work branches fork from `main` and their PRs land on `main`.
+template: github-flow
+
+# One branch per work item, e.g. APARTMENT-SOCIETY-MAINTENANCE-STORY-018-pizza-customisation.
+work_branch_pattern: "{item_id}-{slug}"
